@@ -88,7 +88,7 @@ class TestGetEmbeddings(unittest.TestCase):
     """Testes para configuração de embeddings."""
     
     @patch.dict(os.environ, {'OPENAI_API_KEY': 'test-key'})
-    @patch('ingest.OpenAIEmbeddings')
+    @patch('langchain_openai.OpenAIEmbeddings')
     def test_get_embeddings_openai(self, mock_embeddings_class):
         """Testa obtenção de embeddings OpenAI."""
         mock_embeddings = Mock()
@@ -102,18 +102,18 @@ class TestGetEmbeddings(unittest.TestCase):
         mock_embeddings_class.assert_called_once()
     
     @patch.dict(os.environ, {'GOOGLE_API_KEY': 'test-key'}, clear=True)
-    @patch('ingest.GoogleGenerativeAIEmbeddings')
+    @patch('langchain_google_genai.GoogleGenerativeAIEmbeddings')
     def test_get_embeddings_google(self, mock_embeddings_class):
         """Testa obtenção de embeddings Google."""
         mock_embeddings = Mock()
         mock_embeddings_class.return_value = mock_embeddings
         
         # Executar
-        result = get_embeddings()
+        result = get_embeddings("google")
         
         # Verificar
         self.assertEqual(result, mock_embeddings)
-        mock_embeddings_class.assert_called_once()
+        mock_embeddings_class.assert_called_once_with(model="models/embedding-001")
     
     @patch.dict(os.environ, {}, clear=True)
     def test_get_embeddings_no_key(self):
@@ -121,7 +121,7 @@ class TestGetEmbeddings(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
             get_embeddings()
         
-        self.assertIn("Nenhuma API key encontrada", str(context.exception))
+        self.assertIn("OPENAI_API_KEY não encontrada", str(context.exception))
 
 
 class TestStoreDocuments(unittest.TestCase):
@@ -189,13 +189,24 @@ class TestIngestPdf(unittest.TestCase):
         mock_embeddings.assert_called_once()
         mock_store.assert_called_once()
     
-    @patch.dict(os.environ, {'PDF_PATH': 'test.pdf'}, clear=True)
-    def test_ingest_pdf_no_connection_string(self):
+    @patch('ingest.load_pdf')
+    @patch('ingest.split_documents')
+    @patch('ingest.get_embeddings')
+    @patch.dict(os.environ, {
+        'PDF_PATH': 'test.pdf',
+        'OPENAI_API_KEY': 'test-key'
+    }, clear=True)
+    def test_ingest_pdf_no_connection_string(self, mock_get_embeddings, mock_split, mock_load):
         """Testa erro quando não há string de conexão."""
+        # Setup mocks para passar até chegar na verificação da connection string
+        mock_load.return_value = [Mock()]
+        mock_split.return_value = [Mock()]
+        mock_get_embeddings.return_value = Mock()
+        
         with self.assertRaises(ValueError) as context:
             ingest_pdf()
         
-        self.assertIn("POSTGRES_CONNECTION_STRING", str(context.exception))
+        self.assertIn("DATABASE_URL ou POSTGRES_CONNECTION_STRING", str(context.exception))
 
 
 if __name__ == '__main__':

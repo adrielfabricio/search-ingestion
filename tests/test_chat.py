@@ -8,12 +8,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from chat import get_llm
 
-
 class TestGetLLM(unittest.TestCase):
     """Testes para obtenção do LLM."""
     
     @patch.dict(os.environ, {'OPENAI_API_KEY': 'test-key'})
-    @patch('chat.ChatOpenAI')
+    @patch('langchain_openai.ChatOpenAI')
     def test_get_llm_openai(self, mock_chat_class):
         """Testa obtenção de LLM OpenAI."""
         mock_llm = Mock()
@@ -23,19 +22,19 @@ class TestGetLLM(unittest.TestCase):
         
         self.assertEqual(result, mock_llm)
         mock_chat_class.assert_called_once_with(
-            model="gpt-3.5-turbo",
+            model="gpt-5-nano",
             temperature=0.0,
             max_tokens=500
         )
     
     @patch.dict(os.environ, {'GOOGLE_API_KEY': 'test-key'}, clear=True)
-    @patch('chat.ChatGoogleGenerativeAI')
+    @patch('langchain_google_genai.ChatGoogleGenerativeAI')
     def test_get_llm_google(self, mock_chat_class):
         """Testa obtenção de LLM Google."""
         mock_llm = Mock()
         mock_chat_class.return_value = mock_llm
         
-        result = get_llm()
+        result = get_llm("google")
         
         self.assertEqual(result, mock_llm)
         mock_chat_class.assert_called_once_with(

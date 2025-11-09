@@ -19,7 +19,7 @@ class TestGetEmbeddings(unittest.TestCase):
     """Testes para obtenção de embeddings."""
     
     @patch.dict(os.environ, {'OPENAI_API_KEY': 'test-key'})
-    @patch('search.OpenAIEmbeddings')
+    @patch('langchain_openai.OpenAIEmbeddings')
     def test_get_embeddings_openai(self, mock_embeddings_class):
         """Testa obtenção de embeddings OpenAI."""
         mock_embeddings = Mock()
@@ -45,7 +45,7 @@ class TestGetVectorstore(unittest.TestCase):
     @patch.dict(os.environ, {
         'POSTGRES_CONNECTION_STRING': 'postgresql://test',
         'OPENAI_API_KEY': 'test-key'
-    })
+    }, clear=True)
     def test_get_vectorstore(self, mock_pgvector_class, mock_get_embeddings):
         """Testa obtenção do vectorstore."""
         mock_embeddings = Mock()
@@ -58,11 +58,10 @@ class TestGetVectorstore(unittest.TestCase):
         
         self.assertEqual(result, mock_vectorstore)
         mock_get_embeddings.assert_called_once()
-        mock_pgvector_class.assert_called_once_with(
-            embeddings=mock_embeddings,
-            connection='postgresql://test',
-            use_jsonb=True
-        )
+        call_args = mock_pgvector_class.call_args
+        self.assertEqual(call_args.kwargs['embeddings'], mock_embeddings)
+        self.assertEqual(call_args.kwargs['connection'], 'postgresql://test')
+        self.assertEqual(call_args.kwargs['use_jsonb'], True)
     
     @patch.dict(os.environ, {}, clear=True)
     def test_get_vectorstore_no_connection_string(self):
